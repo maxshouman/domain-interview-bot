@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "chore/**"
+      - "feat/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality checks (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14", "3.15"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: "0.13.10"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install project dependencies
+        run: uv sync --locked
+
+      - name: Run Ruff lint
+        run: uv run --locked ruff check .
+
+      - name: Check code formatting
+        run: uv run --locked ruff format --check .
+
+      - name: Run mypy
+        run: uv run --locked mypy
+
+      - name: Build package
+        run: uv build
+
+      - name: Smoke test CLI
+        run: uv run --locked domain-interview-bot
